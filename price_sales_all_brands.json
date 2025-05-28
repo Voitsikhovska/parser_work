@@ -1,0 +1,123 @@
+[
+  {
+    "brand": "Adidas",
+    "date": "Current",
+    "price_sales": "1.85"
+  },
+  {
+    "brand": "Adidas",
+    "date": "3/31/2025",
+    "price_sales": "1.92"
+  },
+  {
+    "brand": "Adidas",
+    "date": "12/31/2024",
+    "price_sales": "1.85"
+  },
+  {
+    "brand": "Adidas",
+    "date": "9/30/2024",
+    "price_sales": "1.73"
+  },
+  {
+    "brand": "Puma",
+    "date": "Current",
+    "price_sales": "0.66"
+  },
+  {
+    "brand": "Puma",
+    "date": "12/31/2024",
+    "price_sales": "0.75"
+  },
+  {
+    "brand": "Puma",
+    "date": "9/30/2024",
+    "price_sales": "0.73"
+  },
+  {
+    "brand": "Puma",
+    "date": "6/30/2024",
+    "price_sales": "0.86"
+  },
+  {
+    "brand": "Nike",
+    "date": "Current",
+    "price_sales": "2.39"
+  },
+  {
+    "brand": "Nike",
+    "date": "2/28/2025",
+    "price_sales": "2.48"
+  },
+  {
+    "brand": "Nike",
+    "date": "11/30/2024",
+    "price_sales": "2.84"
+  },
+  {
+    "brand": "Nike",
+    "date": "8/31/2024",
+    "price_sales": "3.12"
+  },
+  {
+    "brand": "Under Armour",
+    "date": "Current",
+    "price_sales": "0.71"
+  },
+  {
+    "brand": "Under Armour",
+    "date": "12/31/2024",
+    "price_sales": "0.53"
+  },
+  {
+    "brand": "Under Armour",
+    "date": "9/30/2024",
+    "price_sales": "0.58"
+  },
+  {
+    "brand": "Under Armour",
+    "date": "6/30/2024",
+    "price_sales": "0.68"
+  },
+  {
+    "brand": "Columbia Sportswear",
+    "date": "Current",
+    "price_sales": "1.50"
+  },
+  {
+    "brand": "Columbia Sportswear",
+    "date": "3/31/2025",
+    "price_sales": "1.48"
+  },
+  {
+    "brand": "Columbia Sportswear",
+    "date": "12/31/2024",
+    "price_sales": "1.40"
+  },
+  {
+    "brand": "Columbia Sportswear",
+    "date": "9/30/2024",
+    "price_sales": "1.43"
+  },
+
+  {
+    "brand": "Vans",
+    "date": "Current",
+    "price_sales": "5.58"
+  },
+  {
+    "brand": "Vans",
+    "date": "12/31/2024",
+    "price_sales": "5.88"
+  },
+  {
+    "brand": "Vans",
+    "date": "9/30/2024",
+    "price_sales": "5.99"
+  },
+  {
+    "brand": "Vans",
+    "date": "6/30/2024",
+    "price_sales": "4.52"
+  }
+]

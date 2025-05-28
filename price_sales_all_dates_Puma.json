@@ -1,0 +1,22 @@
+[
+  {
+    "brand": "Puma",
+    "date": "Current",
+    "price_sales": "0.66"
+  },
+  {
+    "brand": "Puma",
+    "date": "12/31/2024",
+    "price_sales": "0.75"
+  },
+  {
+    "brand": "Puma",
+    "date": "9/30/2024",
+    "price_sales": "0.73"
+  },
+  {
+    "brand": "Puma",
+    "date": "6/30/2024",
+    "price_sales": "0.86"
+  }
+]

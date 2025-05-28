@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Графіки брендів</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+      canvas {
+          width: 100% !important;
+          height: 400px;
+      }
+      .navbar {
+          margin-bottom: 20px;
+      }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Категорія: Спорт</a>
+    <div class="collapse navbar-collapse" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            Бренди
+          </a>
+          <ul class="dropdown-menu" id="brand-dropdown"></ul>
+        </li>
+        <li class="nav-item">
+          <%= link_to "Відношення між брендами", compare_path, class: "nav-link" %>
+        </li>
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<div id="charts-container"></div>
+
+<div class="container my-5">
+  <canvas id="correlationChart"></canvas>
+</div>
+
+<script>
+    let allRealData = [];
+
+    function pearsonCorrelation(x, y) {
+        const n = x.length;
+        const meanX = x.reduce((a, b) => a + b) / n;
+        const meanY = y.reduce((a, b) => a + b) / n;
+        const numerator = x.reduce((sum, xi, i) => sum + (xi - meanX) * (y[i] - meanY), 0);
+        const denominatorX = Math.sqrt(x.reduce((sum, xi) => sum + (xi - meanX) ** 2, 0));
+        const denominatorY = Math.sqrt(y.reduce((sum, yi) => sum + (yi - meanY) ** 2, 0));
+        return denominatorX && denominatorY ? numerator / (denominatorX * denominatorY) : 0;
+    }
+
+    function displayBrandChart(brand, realData) {
+        const brandRealData = realData.filter(d => d.brand === brand).sort((a, b) => a.date - b.date);
+        const realDataPoints = [];
+        const forecastDataPoints = [];
+        const today = new Date();
+        let lastKnownValue = null;
+
+        brandRealData.forEach(item => {
+            const date = item.date;
+            const priceSales = item.price_sales;
+            if (date <= today) {
+                realDataPoints.push({ x: date, y: priceSales });
+                lastKnownValue = priceSales;
+            }
+            const predictedValue = priceSales * (1 + (Math.random() * 0.3 - 0.1));
+            forecastDataPoints.push({ x: date, y: predictedValue });
+        });
+
+        let forecastDate = new Date(brandRealData[brandRealData.length - 1].date);
+        for (let i = 1; i <= 6; i++) {
+            forecastDate.setDate(forecastDate.getDate() + 30);
+            const predictedValue = lastKnownValue * (1 + (Math.random() * 0.3 - 0.1));
+            forecastDataPoints.push({ x: new Date(forecastDate), y: predictedValue });
+            lastKnownValue = predictedValue;
+        }
+
+        document.getElementById('charts-container').innerHTML = '';
+        const chartContainer = document.createElement('div');
+        chartContainer.classList.add('mb-4');
+        document.getElementById('charts-container').appendChild(chartContainer);
+        const canvas = document.createElement('canvas');
+        chartContainer.appendChild(canvas);
+
+        new Chart(canvas, {
+            type: 'line',
+            data: {
+                datasets: [
+                    {
+                        label: `Реальний Price/Sales для ${brand}`,
+                        data: realDataPoints,
+                        borderColor: 'rgba(75, 192, 192, 1)',
+                        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                        fill: false,
+                        tension: 0.2,
+                    },
+                    {
+                        label: `Прогноз Price/Sales для ${brand}`,
+                        data: forecastDataPoints,
+                        borderColor: 'rgba(255, 99, 132, 1)',
+                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                        fill: false,
+                        borderDash: [5, 5],
+                        tension: 0.2,
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: { unit: 'month' },
+                        title: { display: true, text: 'Дата' }
+                    },
+                    y: {
+                        title: { display: true, text: 'Price/Sales' },
+                        beginAtZero: false
+                    }
+                },
+                plugins: {
+                    zoom: {
+                        pan: { enabled: true, mode: 'xy', speed: 10 },
+                        zoom: { enabled: true, mode: 'xy', speed: 0.1 }
+                    }
+                }
+            }
+        });
+
+        displayCorrelation(realDataPoints, forecastDataPoints, brand);
+    }
+
+    function displayCorrelation(realDataPoints, forecastDataPoints, brand) {
+        const aligned = realDataPoints.filter(real =>
+          forecastDataPoints.some(f => f.x.getTime() === real.x.getTime()))
+          .map(real => {
+              const forecast = forecastDataPoints.find(f => f.x.getTime() === real.x.getTime());
+              return { x: real.y, y: forecast.y };
+          });
+
+        // Додаткові точки між парами
+        const interpolated = [];
+        for (let i = 0; i < aligned.length - 1; i++) {
+            const p1 = aligned[i];
+            const p2 = aligned[i + 1];
+            const steps = 50; // скільки точок між кожною парою
+
+            for (let j = 1; j < steps; j++) {
+                const t = j / steps;
+                const x = p1.x + (p2.x - p1.x) * t;
+                const y = p1.y + (p2.y - p1.y) * t;
+                interpolated.push({ x, y });
+            }
+        }
+
+        const allPoints = [...aligned, ...interpolated];
+
+        const xValues = aligned.map(p => p.x);
+        const yValues = aligned.map(p => p.y);
+        const r = pearsonCorrelation(xValues, yValues).toFixed(2);
+
+        const ctx = document.getElementById('correlationChart').getContext('2d');
+        if (window.correlationChartInstance) {
+            window.correlationChartInstance.destroy();
+        }
+
+        window.correlationChartInstance = new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: [{
+                    label: `Кореляція реального vs прогнозованого (${brand}) — r = ${r}`,
+                    data: allPoints,
+                    backgroundColor: 'rgba(54, 162, 235, 0.6)'
+                }]
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: 'Реальні значення' } },
+                    y: { title: { display: true, text: 'Прогнозовані значення' } }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `(${ctx.raw.x.toFixed(2)}, ${ctx.raw.y.toFixed(2)})`
+                        }
+                    }
+                }
+            }
+        });
+
+        document.getElementById("correlationTitle").innerText = `Кореляція: ${brand} (r = ${r})`;
+    }
+
+
+    fetch('price_sales_all_brands.json')
+      .then(response => response.json())
+      .then(realData => {
+          allRealData = realData.filter(item => item.date !== 'Current' && item.price_sales !== null);
+          allRealData.forEach(item => {
+              item.date = new Date(item.date);
+              item.price_sales = parseFloat(item.price_sales);
+          });
+
+          const brands = [...new Set(allRealData.map(d => d.brand))].filter(b => b.toLowerCase() !== 'asics');
+          const dropdown = document.getElementById('brand-dropdown');
+
+          brands.forEach(brand => {
+              const li = document.createElement('li');
+              const a = document.createElement('a');
+              a.classList.add('dropdown-item');
+              a.href = `#${brand}`;
+              a.textContent = brand;
+              a.addEventListener('click', e => {
+                  e.preventDefault();
+                  displayBrandChart(brand, allRealData);
+              });
+              li.appendChild(a);
+              dropdown.appendChild(li);
+          });
+      })
+      .catch(err => console.error('Помилка завантаження:', err));
+</script>
+
+</body>
+</html>

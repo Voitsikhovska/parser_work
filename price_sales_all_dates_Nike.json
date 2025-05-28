@@ -1,0 +1,22 @@
+[
+  {
+    "brand": "Nike",
+    "date": "Current",
+    "price_sales": "2.39"
+  },
+  {
+    "brand": "Nike",
+    "date": "2/28/2025",
+    "price_sales": "2.48"
+  },
+  {
+    "brand": "Nike",
+    "date": "11/30/2024",
+    "price_sales": "2.84"
+  },
+  {
+    "brand": "Nike",
+    "date": "8/31/2024",
+    "price_sales": "3.12"
+  }
+]

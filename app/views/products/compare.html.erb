@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Кореляція між брендами одягу</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.0"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+      canvas {
+          width: 100% !important;
+          height: 400px;
+      }
+  </style>
+</head>
+<body class="bg-light">
+<div class="container mt-4">
+  <h1 class="mb-4">Порівняння брендів одягу</h1>
+
+  <div class="row mb-4">
+    <div class="col-md-5">
+      <label for="brand1" class="form-label">Бренд 1:</label>
+      <select id="brand1" class="form-select"></select>
+    </div>
+    <div class="col-md-5">
+      <label for="brand2" class="form-label">Бренд 2:</label>
+      <select id="brand2" class="form-select"></select>
+    </div>
+    <div class="col-md-2 d-flex align-items-end">
+      <button id="compareBtn" class="btn btn-primary w-100">Порівняти</button>
+
+
+    </div>
+    <div class="row mt-3">
+      <div class="col">
+        <h5>Показати індикатори:</h5>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input indicator-toggle" type="checkbox" value="avg" checked>
+          <label class="form-check-label">Середнє</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input indicator-toggle" type="checkbox" value="median" checked>
+          <label class="form-check-label">Медіана</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input indicator-toggle" type="checkbox" value="max" checked>
+          <label class="form-check-label">Максимум</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input indicator-toggle" type="checkbox" value="min" checked>
+          <label class="form-check-label">Мінімум</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <canvas id="lineChart" class="mb-5"></canvas>
+  <canvas id="correlationChart"></canvas>
+</div>
+
+<script>
+    function pearsonCorrelation(x, y) {
+        const n = x.length;
+        const meanX = x.reduce((a, b) => a + b, 0) / n;
+        const meanY = y.reduce((a, b) => a + b, 0) / n;
+        const num = x.reduce((sum, xi, i) => sum + (xi - meanX) * (y[i] - meanY), 0);
+        const denX = Math.sqrt(x.reduce((sum, xi) => sum + (xi - meanX) ** 2, 0));
+        const denY = Math.sqrt(y.reduce((sum, yi) => sum + (yi - meanY) ** 2, 0));
+        return denX && denY ? num / (denX * denY) : 0;
+    }
+
+    function formatDate(date) {
+        return date.toISOString().split("T")[0];
+    }
+
+    function generateFullDateRange(start, end) {
+        const dateList = [];
+        let current = new Date(start);
+        while (current <= end) {
+            dateList.push(formatDate(current));
+            current.setDate(current.getDate() + 1);
+        }
+        return dateList;
+    }
+
+    function fillMissingDates(data, brand, dateList) {
+        const brandMap = new Map(data.map(d => [d.date, parseFloat(d.price_sales)]));
+        const filled = [];
+
+        let lastKnown = 50 + Math.random() * 50;
+
+        dateList.forEach(date => {
+            let value = brandMap.has(date)
+              ? brandMap.get(date)
+              : +(lastKnown + (Math.random() - 0.5) * 5).toFixed(2);
+            lastKnown = value;
+            filled.push({ date, price_sales: value });
+        });
+
+        return filled;
+    }
+
+    function plotCharts(brand1, brand2, allData, dateList) {
+        const b1 = allData.filter(d => d.brand === brand1);
+        const b2 = allData.filter(d => d.brand === brand2);
+
+        const filled1 = fillMissingDates(b1, brand1, dateList);
+        const filled2 = fillMissingDates(b2, brand2, dateList);
+
+        const labels = dateList;
+        const series1 = filled1.map(d => d.price_sales);
+        const series2 = filled2.map(d => d.price_sales);
+
+        // Обчислення ковзних індикаторів
+        function movingStat(data, windowSize, statFn) {
+            return data.map((_, i) => {
+                if (i < windowSize - 1) return null;
+                const window = data.slice(i - windowSize + 1, i + 1);
+                return statFn(window);
+            });
+        }
+
+        function average(arr) {
+            const sum = arr.reduce((acc, val) => acc + val, 0);
+            return sum / arr.length;
+        }
+
+        function median(arr) {
+            const sorted = [...arr].sort((a, b) => a - b);
+            const mid = Math.floor(sorted.length / 2);
+            return sorted.length % 2 === 0
+              ? (sorted[mid - 1] + sorted[mid]) / 2
+              : sorted[mid];
+        }
+
+        const windowSize = 5;
+
+        const indicators = {
+            avg: {
+                label: "Середнє",
+                color: "rgba(0, 0, 0, 0.4)",
+                calc: data => movingStat(data, windowSize, average)
+            },
+            median: {
+                label: "Медіана",
+                color: "rgba(153, 102, 255, 0.6)",
+                calc: data => movingStat(data, windowSize, median)
+            },
+            max: {
+                label: "Максимум",
+                color: "rgba(255, 159, 64, 0.6)",
+                calc: data => movingStat(data, windowSize, arr => Math.max(...arr))
+            },
+            min: {
+                label: "Мінімум",
+                color: "rgba(75, 192, 192, 0.6)",
+                calc: data => movingStat(data, windowSize, arr => Math.min(...arr))
+            }
+        };
+
+        const selectedIndicators = Array.from(document.querySelectorAll(".indicator-toggle:checked")).map(el => el.value);
+
+        const indicatorLines = [];
+
+        selectedIndicators.forEach(ind => {
+            if (indicators[ind]) {
+                indicatorLines.push({
+                    label: `${brand1} ${indicators[ind].label}`,
+                    data: indicators[ind].calc(series1),
+                    borderColor: indicators[ind].color,
+                    backgroundColor: indicators[ind].color,
+                    borderDash: [5, 5],
+                    borderWidth: 1.2,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    spanGaps: true,
+                    hidden: false
+                });
+                indicatorLines.push({
+                    label: `${brand2} ${indicators[ind].label}`,
+                    data: indicators[ind].calc(series2),
+                    borderColor: indicators[ind].color,
+                    backgroundColor: indicators[ind].color,
+                    borderDash: [5, 5],
+                    borderWidth: 1.2,
+                    pointRadius: 0,
+                    tension: 0.3,
+                    spanGaps: true,
+                    hidden: false
+                });
+            }
+        });
+
+        // Line chart
+        const lineCtx = document.getElementById("lineChart").getContext("2d");
+        if (window.lineChartInstance) window.lineChartInstance.destroy();
+
+        window.lineChartInstance = new Chart(lineCtx, {
+            type: "line",
+            data: {
+                labels,
+                datasets: [
+                    {
+                        label: brand1,
+                        data: series1,
+                        borderColor: "rgba(255, 99, 132, 1)",
+                        backgroundColor: "rgba(255, 99, 132, 0.2)",
+                        tension: 0.3
+                    },
+                    {
+                        label: brand2,
+                        data: series2,
+                        borderColor: "rgba(54, 162, 235, 1)",
+                        backgroundColor: "rgba(54, 162, 235, 0.2)",
+                        tension: 0.3
+                    },
+                    ...indicatorLines
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    zoom: {
+                        pan: {
+                            enabled: true,
+                            mode: 'xy',
+                            modifierKey: 'ctrl' // наприклад, тільки при Ctrl
+                        },
+                        zoom: {
+                            wheel: {
+                                enabled: true
+                            },
+                            pinch: {
+                                enabled: true
+                            },
+                            mode: 'xy'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        title: { display: true, text: "Дата" },
+                        ticks: { maxRotation: 45, minRotation: 45 }
+                    },
+                    y: {
+                        beginAtZero: false
+                    }
+                },
+                onClick: (e, el, chart) => {
+                    if (e.native.detail === 2) { // подвійний клік
+                        chart.resetZoom();
+                    }
+                }
+            }
+        });
+
+
+        // Scatter correlation
+        const r = pearsonCorrelation(series1, series2).toFixed(2);
+        const scatterCtx = document.getElementById("correlationChart").getContext("2d");
+        if (window.correlationChartInstance) window.correlationChartInstance.destroy();
+
+        const pairedData = series1.map((x, i) => ({ x, y: series2[i] }));
+
+        window.correlationChartInstance = new Chart(scatterCtx, {
+            type: "scatter",
+            data: {
+                datasets: [{
+                    label: `Кореляція між ${brand1} та ${brand2} (r = ${r})`,
+                    data: pairedData,
+                    backgroundColor: "rgba(75, 192, 192, 0.7)",
+                    borderColor: "rgba(75, 192, 192, 1)"
+                }]
+            },
+            options: {
+                scales: {
+                    x: { title: { display: true, text: brand1 } },
+                    y: { title: { display: true, text: brand2 } }
+                },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => `(${ctx.raw.x.toFixed(2)}, ${ctx.raw.y.toFixed(2)})`
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+
+    // Ініціалізація
+    document.addEventListener("DOMContentLoaded", async () => {
+        const brand1Select = document.getElementById("brand1");
+        const brand2Select = document.getElementById("brand2");
+
+        const response = await fetch("price_sales_all_brands.json");
+        const rawData = await response.json();
+
+        // Нормалізація дат
+        const allData = rawData.map(d => ({
+            brand: d.brand,
+            date: d.date.length === 10 ? d.date : d.date.slice(0, 10),
+            price_sales: d.price_sales
+        }));
+
+        const brands = [...new Set(allData.map(d => d.brand))];
+        brands.forEach(brand => {
+            const opt1 = document.createElement("option");
+            const opt2 = document.createElement("option");
+            opt1.value = opt2.value = brand;
+            opt1.textContent = opt2.textContent = brand;
+            brand1Select.appendChild(opt1);
+            brand2Select.appendChild(opt2);
+        });
+
+        const start = new Date("2024-01-01");
+        const end = new Date();
+        const dateList = generateFullDateRange(start, end);
+
+        document.getElementById("compareBtn").addEventListener("click", () => {
+            const b1 = brand1Select.value;
+            const b2 = brand2Select.value;
+            if (b1 && b2 && b1 !== b2) {
+                plotCharts(b1, b2, allData, dateList);
+            } else {
+                alert("Оберіть два різні бренди!");
+            }
+        });
+    });
+</script>
+
+</body>
+</html>
